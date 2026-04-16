@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LumiUS - Leitor de Placa Industrial</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-1: #06142b;
+      --bg-2: #0a1f47;
+      --bg-3: #081326;
+      --panel: rgba(8, 20, 44, 0.88);
+      --panel-strong: rgba(9, 23, 51, 0.96);
+      --panel-soft: rgba(17, 35, 69, 0.9);
+      --border: rgba(92, 128, 184, 0.28);
+      --border-strong: rgba(111, 152, 219, 0.42);
+      --text: #f5f9ff;
+      --muted: #b8c7e3;
+      --muted-2: #8ea3c7;
+      --accent: #4aa3ff;
+      --accent-2: #28c76f;
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(47, 97, 190, 0.22), transparent 28%),
+        radial-gradient(circle at top right, rgba(18, 111, 255, 0.10), transparent 20%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2) 48%, var(--bg-3));
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    .page-shell {
+      width: 100%;
+      max-width: 1660px;
+      margin: 0 auto;
+      padding: 18px 22px 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      background: rgba(7, 17, 39, 0.55);
+      backdrop-filter: blur(10px);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .brand-mark::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), #7db9ff);
+      box-shadow: 0 0 18px rgba(74, 163, 255, 0.5);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 38px;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .brand p {
+      margin: 0;
+      max-width: 900px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .nav-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 14px;
+      border: 1px solid var(--border-strong);
+      background: linear-gradient(180deg, rgba(29, 53, 96, 0.95), rgba(20, 37, 69, 0.95));
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .nav-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(132, 171, 234, 0.7);
+      background: linear-gradient(180deg, rgba(35, 64, 116, 0.98), rgba(24, 45, 84, 0.98));
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hero-card,
+    .panel {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 22px 24px;
+    }
+
+    .hero-card h2 {
+      margin: 0 0 10px;
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 840px;
+    }
+
+    .hero-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(14, 31, 61, 0.72);
+      border: 1px solid rgba(106, 141, 201, 0.18);
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted-2);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    .hero-side {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      background:
+        radial-gradient(circle at top right, rgba(74, 163, 255, 0.12), transparent 40%),
+        var(--panel);
+    }
+
+    .hero-side h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .hero-side p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .hero-tags {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hero-tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(25, 54, 102, 0.72);
+      border: 1px solid rgba(103, 144, 214, 0.26);
+      color: #d7e6ff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .panel-title-group h2 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-title-group p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(21, 46, 85, 0.82);
+      border: 1px solid rgba(94, 130, 189, 0.22);
+      color: #cfe0ff;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    button,
+    input[type="file"] {
+      min-height: 46px;
+      border-radius: 14px;
+      border: 1px solid var(--border-strong);
+      background: linear-gradient(180deg, rgba(24, 44, 80, 0.98), rgba(16, 31, 59, 0.98));
+      color: var(--text);
+      padding: 0 14px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    button {
+      cursor: pointer;
+      transition: transform 0.18s ease, opacity 0.18s ease, border-color 0.18s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(131, 172, 236, 0.72);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .preview {
+      width: 100%;
+      min-height: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed rgba(105, 142, 204, 0.45);
+      border-radius: 22px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(1, 10, 24, 0.95), rgba(2, 9, 20, 0.98));
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .preview img {
+      max-width: 100%;
+      max-height: 560px;
+      display: block;
+      border-radius: 14px;
+    }
+
+    .subtle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--muted-2);
+      line-height: 1.5;
+    }
+
+    .status {
+      margin-top: 10px;
+      padding: 15px 16px;
+      border-radius: 16px;
+      background: rgba(26, 42, 75, 0.9);
+      border: 1px solid rgba(96, 129, 184, 0.3);
+      white-space: pre-wrap;
+      line-height: 1.45;
+      color: #e4eeff;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .result-item {
+      background: rgba(10, 27, 55, 0.82);
+      border: 1px solid rgba(88, 121, 178, 0.24);
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 94px;
+    }
+
+    .label {
+      font-size: 11px;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+    }
+
+    .value {
+      font-size: 27px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      word-break: break-word;
+      line-height: 1.05;
+    }
+
+    .value.small {
+      font-size: 22px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 230px;
+      resize: vertical;
+      border-radius: 18px;
+      border: 1px solid rgba(97, 132, 191, 0.3);
+      background: rgba(3, 12, 28, 0.96);
+      color: #dbe8ff;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.55;
+      outline: none;
+    }
+
+    .action-row {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .next-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 18px;
+      text-decoration: none;
+      border-radius: 14px;
+      border: 1px solid rgba(66, 158, 105, 0.55);
+      background: linear-gradient(180deg, rgba(24, 116, 61, 0.96), rgba(18, 92, 49, 0.96));
+      color: white;
+      font-size: 14px;
+      font-weight: 800;
+      transition: transform 0.18s ease, opacity 0.18s ease;
+      pointer-events: none;
+      opacity: 0.45;
+    }
+
+    .next-btn.enabled {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .next-btn.enabled:hover {
+      transform: translateY(-1px);
+    }
+
+    @media (max-width: 1280px) {
+
+      .hero,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .page-shell {
+        padding: 12px;
+      }
+
+      .topbar,
+      .hero-card,
+      .hero-side,
+      .panel {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .brand h1,
+      .brand-text h1 {
+        font-size: 30px;
+      }
+
+      .hero-metrics,
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .action-row {
+        justify-content: stretch;
+      }
+
+      .next-btn,
+      .nav-link,
+      button,
+      input[type="file"] {
+        width: 100%;
+      }
+
+      .preview {
+        min-height: 320px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">Plataforma inteligente industrial</div>
+        <h1>LumiUS</h1>
+        <p>Leitura de placas industriais com OCR inteligente para capturar dados técnicos com rapidez e preparar a
+          análise de consumo, carbono e retrofit.</p>
+      </div>
+
+      <div class="nav-actions">
+        <a class="nav-link" href="analise.html">Ir para análise</a>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-card">
+        <h2>Transforme uma foto da placa em inteligência operacional</h2>
+        <p>
+          O LumiUS interpreta placas industriais, estrutura os dados técnicos e entrega uma base pronta para análise
+          energética e diagnósticos sustentáveis.
+        </p>
+
+        <div class="hero-metrics">
+          <div class="metric">
+            <span>Etapa 1</span>
+            <strong>OCR técnico</strong>
+          </div>
+          <div class="metric">
+            <span>Entrada</span>
+            <strong>Imagem da placa</strong>
+          </div>
+          <div class="metric">
+            <span>Saída</span>
+            <strong>Dados extraídos</strong>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hero-side">
+        <div>
+          <h3>Fluxo da plataforma</h3>
+          <p>Faça o upload da imagem, processe o OCR, valide os dados extraídos e siga para a análise inteligente com a
+            mesma base técnica.</p>
+        </div>
+
+        <div class="hero-tags">
+          <span class="hero-tag">OCR industrial</span>
+          <span class="hero-tag">Dados técnicos</span>
+          <span class="hero-tag">Pronto para análise</span>
+        </div>
+      </aside>
+    </section>
+
+    <main class="layout">
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2>Leitura da imagem</h2>
+            <p>Envie uma foto da placa e gere a versão processada para o OCR.</p>
+          </div>
+          <div class="pill">Etapa 1</div>
+        </div>
+
+        <div class="controls">
+          <input type="file" id="fileInput" accept="image/*" />
+          <button id="processBtn" disabled>Processar imagem</button>
+          <button id="downloadBtn" disabled>Baixar imagem tratada</button>
+        </div>
+
+        <div class="preview" id="previewBox">
+          <span id="previewPlaceholder">Nenhuma imagem enviada.</span>
+        </div>
+
+        <canvas id="canvas" style="display:none;"></canvas>
+
+        <div class="subtle-row">
+          <div class="hint">Use uma foto frontal, nítida e com boa iluminação para melhorar a leitura da placa.</div>
+          <div class="pill">OCR + pré-processamento</div>
+        </div>
+
+        <div class="status" id="status">Aguardando imagem...</div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2>Dados extraídos</h2>
+            <p>Os principais campos técnicos reconhecidos pelo sistema aparecerão aqui.</p>
+          </div>
+          <div class="pill">Resultado estruturado</div>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-item">
+            <div class="label">Fabricante</div>
+            <div class="value small" id="fabricante">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">Modelo</div>
+            <div class="value small" id="modelo">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">RPM</div>
+            <div class="value" id="rpm">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">Tensão</div>
+            <div class="value" id="tensao">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">Potência</div>
+            <div class="value small" id="potencia">-</div>
+          </div>
+        </div>
+
+        <textarea id="rawText" placeholder="O texto reconhecido aparecerá aqui..." readonly></textarea>
+
+        <div class="action-row">
+          <a href="analise.html" id="nextPageBtn" class="next-btn">Continuar para análise</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const processBtn = document.getElementById('processBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const previewBox = document.getElementById('previewBox');
+    const statusBox = document.getElementById('status');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const rawTextArea = document.getElementById('rawText');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+
+    const fields = {
+      fabricante: document.getElementById('fabricante'),
+      modelo: document.getElementById('modelo'),
+      rpm: document.getElementById('rpm'),
+      tensao: document.getElementById('tensao'),
+      potencia: document.getElementById('potencia')
+    };
+
+    const KNOWN_MANUFACTURERS = ['WEG', 'SIEMENS', 'ABB', 'SCHNEIDER', 'VOGES', 'SEW', 'DANFOSS'];
+    const PROCESS_WIDTH = 1600;
+    const DOWNLOAD_MODE = 'grayscale';
+
+    let currentImage = null;
+    let lastProcessedCanvas = null;
+
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const img = new Image();
+
+        img.onload = () => {
+          currentImage = img;
+          previewBox.innerHTML = '';
+          previewBox.appendChild(img);
+          processBtn.disabled = false;
+          downloadBtn.disabled = true;
+          statusBox.textContent = 'Imagem carregada. Clique em "Processar imagem".';
+          localStorage.setItem('ecochain_uploaded_image', e.target.result);
+          clearResults();
+          disableNextStep();
+        };
+
+        img.onerror = () => {
+          currentImage = null;
+          processBtn.disabled = true;
+          statusBox.textContent = 'Falha ao carregar a imagem selecionada.';
+        };
+
+        img.src = e.target.result;
+      };
+
+      reader.onerror = () => {
+        currentImage = null;
+        processBtn.disabled = true;
+        statusBox.textContent = 'Falha ao ler o arquivo da imagem.';
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    processBtn.addEventListener('click', async () => {
+      if (!currentImage) {
+        statusBox.textContent = 'Nenhuma imagem carregada.';
+        return;
+      }
+
+      processBtn.disabled = true;
+      downloadBtn.disabled = true;
+      clearResults();
+      disableNextStep();
+
+      try {
+        statusBox.textContent = 'Preparando imagem...';
+
+        const processed = buildProcessedVariants(currentImage);
+
+        drawCanvasToMain(processed[DOWNLOAD_MODE] || processed.grayscale);
+        lastProcessedCanvas = processed[DOWNLOAD_MODE] || processed.grayscale;
+
+        statusBox.textContent = 'Rodando OCR completo da imagem...';
+        const fullGrayText = await recognizeCanvas(processed.grayscale, { psm: 6 });
+
+        statusBox.textContent = 'Rodando OCR alternativo da imagem...';
+        const fullBinaryText = await recognizeCanvas(processed.binary, { psm: 11 });
+
+        statusBox.textContent = 'Lendo região do fabricante...';
+        const brandRegion = cropCanvas(processed.grayscale, {
+          x: 0.16, y: 0.02, w: 0.68, h: 0.19
+        });
+        const brandText = await recognizeCanvas(brandRegion, {
+          psm: 7,
+          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        });
+
+        statusBox.textContent = 'Lendo região de modelo...';
+        const modelRegion = cropCanvas(processed.grayscale, {
+          x: 0.00, y: 0.18, w: 0.52, h: 0.30
+        });
+        const modelText = await recognizeCanvas(modelRegion, {
+          psm: 6,
+          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-/: '
+        });
+
+        statusBox.textContent = 'Lendo região de dados técnicos...';
+        const specRegion = cropCanvas(processed.binary, {
+          x: 0.34, y: 0.17, w: 0.66, h: 0.42
+        });
+        const specText = await recognizeCanvas(specRegion, {
+          psm: 6,
+          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,:/- kKwWhHpPrRmMvVcC'
+        });
+
+        const textBundle = {
+          fullGrayText,
+          fullBinaryText,
+          brandText,
+          modelText,
+          specText
+        };
+
+        const combinedText = combineTexts(textBundle);
+        rawTextArea.value = combinedText || 'Nenhum texto encontrado.';
+
+        const parsed = parseData(textBundle);
+
+        if (parsed.tensao === '-') {
+          parsed.tensao = extractVoltageFromRawText(combinedText);
+        }
+
+        if (parsed.potencia === '-') {
+          const inferredPower = extractPowerTextFromRawText(combinedText);
+          if (inferredPower !== '-') parsed.potencia = inferredPower;
+        }
+
+        fillResults(parsed);
+        saveProjectData(parsed, combinedText);
+
+        statusBox.textContent = 'Processamento concluído. Você já pode seguir para a etapa de análise.';
+        downloadBtn.disabled = false;
+        enableNextStep();
+      } catch (error) {
+        statusBox.textContent = 'Erro ao executar OCR: ' + error.message;
+      } finally {
+        processBtn.disabled = false;
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!lastProcessedCanvas) return;
+
+      const link = document.createElement('a');
+      link.download = 'placa_tratada.png';
+      link.href = lastProcessedCanvas.toDataURL('image/png');
+      link.click();
+    });
+
+    function saveProjectData(parsed, rawText) {
+      localStorage.setItem('ecochain_parsed_data', JSON.stringify(parsed));
+      localStorage.setItem('ecochain_raw_text', rawText || '');
+      localStorage.setItem('ecochain_last_update', new Date().toISOString());
+    }
+
+    function enableNextStep() {
+      nextPageBtn.classList.add('enabled');
+    }
+
+    function disableNextStep() {
+      nextPageBtn.classList.remove('enabled');
+    }
+
+    function buildProcessedVariants(img) {
+      const ratio = img.height / img.width;
+      const width = PROCESS_WIDTH;
+      const height = Math.max(600, Math.round(width * ratio));
+
+      const base = document.createElement('canvas');
+      base.width = width;
+      base.height = height;
+      const baseCtx = base.getContext('2d', { willReadFrequently: true });
+
+      baseCtx.imageSmoothingEnabled = true;
+      baseCtx.imageSmoothingQuality = 'high';
+      baseCtx.clearRect(0, 0, width, height);
+      baseCtx.drawImage(img, 0, 0, width, height);
+
+      const grayscale = cloneCanvas(base);
+      const grayCtx = grayscale.getContext('2d', { willReadFrequently: true });
+      applyGrayscaleContrast(grayCtx, grayscale.width, grayscale.height);
+
+      const binary = cloneCanvas(grayscale);
+      const binCtx = binary.getContext('2d', { willReadFrequently: true });
+      applyBinaryThreshold(binCtx, binary.width, binary.height);
+
+      return { base, grayscale, binary };
+    }
+
+    function applyGrayscaleContrast(context, width, height) {
+      const imageData = context.getImageData(0, 0, width, height);
+      const data = imageData.data;
+
+      const grays = [];
+      for (let i = 0; i < data.length; i += 4) {
+        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        grays.push(gray);
+      }
+
+      const sorted = [...grays].sort((a, b) => a - b);
+      const lowIndex = Math.floor(sorted.length * 0.02);
+      const highIndex = Math.floor(sorted.length * 0.98);
+      const low = sorted[lowIndex] ?? 0;
+      const high = sorted[highIndex] ?? 255;
+      const range = Math.max(1, high - low);
+
+      let p = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        let value = grays[p++];
+        value = ((value - low) * 255) / range;
+        value = Math.max(0, Math.min(255, value));
+        value = value < 145 ? value * 0.92 : value * 1.04;
+        value = Math.max(0, Math.min(255, value));
+
+        data[i] = value;
+        data[i + 1] = value;
+        data[i + 2] = value;
+      }
+
+      context.putImageData(imageData, 0, 0);
+    }
+
+    function applyBinaryThreshold(context, width, height) {
+      const imageData = context.getImageData(0, 0, width, height);
+      const data = imageData.data;
+
+      let total = 0;
+      let count = 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        total += data[i];
+        count++;
+      }
+
+      const avg = total / Math.max(1, count);
+      const threshold = Math.max(105, Math.min(185, avg * 0.96));
+
+      for (let i = 0; i < data.length; i += 4) {
+        const value = data[i] > threshold ? 255 : 0;
+        data[i] = value;
+        data[i + 1] = value;
+        data[i + 2] = value;
+      }
+
+      context.putImageData(imageData, 0, 0);
+    }
+
+    function cloneCanvas(source) {
+      const c = document.createElement('canvas');
+      c.width = source.width;
+      c.height = source.height;
+      const cctx = c.getContext('2d', { willReadFrequently: true });
+      cctx.drawImage(source, 0, 0);
+      return c;
+    }
+
+    function cropCanvas(sourceCanvas, rect) {
+      const sx = Math.max(0, Math.round(sourceCanvas.width * rect.x));
+      const sy = Math.max(0, Math.round(sourceCanvas.height * rect.y));
+      const sw = Math.max(1, Math.round(sourceCanvas.width * rect.w));
+      const sh = Math.max(1, Math.round(sourceCanvas.height * rect.h));
+
+      const out = document.createElement('canvas');
+      out.width = sw;
+      out.height = sh;
+
+      const outCtx = out.getContext('2d', { willReadFrequently: true });
+      outCtx.imageSmoothingEnabled = true;
+      outCtx.imageSmoothingQuality = 'high';
+      outCtx.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      return out;
+    }
+
+    function drawCanvasToMain(sourceCanvas) {
+      canvas.width = sourceCanvas.width;
+      canvas.height = sourceCanvas.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(sourceCanvas, 0, 0);
+    }
+
+    async function recognizeCanvas(sourceCanvas, options = {}) {
+      const result = await Tesseract.recognize(sourceCanvas, 'eng', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            statusBox.textContent = `Rodando OCR... ${Math.round(m.progress * 100)}%`;
+          }
+        },
+        tessedit_pageseg_mode: options.psm ? String(options.psm) : '6',
+        tessedit_char_whitelist: options.whitelist || undefined,
+        preserve_interword_spaces: '1'
+      });
+
+      return result?.data?.text || '';
+    }
+
+    function combineTexts(bundle) {
+      const parts = [
+        bundle.brandText,
+        bundle.modelText,
+        bundle.specText,
+        bundle.fullGrayText,
+        bundle.fullBinaryText
+      ]
+        .map(normalizeText)
+        .filter(Boolean);
+
+      const seen = new Set();
+      const unique = [];
+
+      for (const part of parts) {
+        if (!seen.has(part)) {
+          seen.add(part);
+          unique.push(part);
+        }
+      }
+
+      return unique.join('\n\n');
+    }
+
+    function normalizeText(text) {
+      return String(text || '')
+        .replace(/[|]/g, 'I')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/[—–]/g, '-')
+        .replace(/[§$]/g, '5')
+        .replace(/\bO(?=\d)/g, '0')
+        .replace(/(?<=\d)O\b/g, '0')
+        .replace(/\s+\n/g, '\n')
+        .replace(/\n\s+/g, '\n')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+    }
+
+    function splitUsefulLines(text) {
+      return String(text || '')
+        .split(/\n+/)
+        .map(line => line.trim())
+        .filter(Boolean);
+    }
+
+    function parseData(bundle) {
+      const fullText = normalizeText([
+        bundle.brandText,
+        bundle.modelText,
+        bundle.specText,
+        bundle.fullGrayText,
+        bundle.fullBinaryText
+      ].join('\n'));
+
+      const lines = splitUsefulLines(fullText);
+      const brandOnly = normalizeText(bundle.brandText);
+      const modelOnly = normalizeText(bundle.modelText);
+      const specOnly = normalizeText(bundle.specText);
+
+      return {
+        fabricante: findManufacturer(brandOnly + '\n' + fullText),
+        modelo: findModel(modelOnly + '\n' + fullText, lines),
+        rpm: findRPM(specOnly + '\n' + fullText, lines),
+        tensao: findVoltage(specOnly + '\n' + fullText, lines),
+        potencia: findPower(specOnly + '\n' + fullText, lines)
+      };
+    }
+
+    function findManufacturer(text) {
+      const upper = String(text || '').toUpperCase();
+
+      for (const fab of KNOWN_MANUFACTURERS) {
+        if (upper.includes(fab)) return fab;
+      }
+
+      const softened = upper
+        .replace(/0/g, 'O')
+        .replace(/1/g, 'I')
+        .replace(/5/g, 'S')
+        .replace(/8/g, 'B');
+
+      for (const fab of KNOWN_MANUFACTURERS) {
+        if (softened.includes(fab)) return fab;
+      }
+
+      return 'Desconhecido';
+    }
+
+    function findModel(text, lines = []) {
+      const upperText = String(text || '').toUpperCase();
+
+      let match = upperText.match(/(?:MOD\.?|MODELO|MODEL|TYPE)\s*[:.]?\s*([A-Z0-9\-\/\.]{2,20})/i);
+      if (match) {
+        const cleaned = cleanupModel(match[1]);
+        if (isValidModel(cleaned)) return cleaned;
+      }
+
+      for (const line of lines) {
+        if (/(MOD\.?|MODELO|MODEL|TYPE)/i.test(line)) {
+          const m = line.match(/([A-Z0-9][A-Z0-9\-\/\.]{2,20})/i);
+          if (m) {
+            const cleaned = cleanupModel(m[1]);
+            if (isValidModel(cleaned)) return cleaned;
+          }
+        }
+      }
+
+      const candidates = upperText.match(/\b[A-Z0-9]{2,}[A-Z0-9\-\/\.]{1,12}\b/g) || [];
+      for (const candidate of candidates) {
+        const cleaned = cleanupModel(candidate);
+        if (isValidModel(cleaned)) return cleaned;
+      }
+
+      return '-';
+    }
+
+    function cleanupModel(value) {
+      return String(value || '')
+        .replace(/^(MOD|MODEL|MODELO|TYPE)[\s.:/-]*/i, '')
+        .replace(/[^A-Z0-9\-\/\.]/gi, '')
+        .toUpperCase();
+    }
+
+    function isValidModel(value) {
+      if (!value || value.length < 2) return false;
+      if (KNOWN_MANUFACTURERS.includes(value)) return false;
+      if (/^(RPM|KW|CV|HP|HZ|V|A|IP)$/.test(value)) return false;
+      if (/^\d{4}$/.test(value)) return false;
+      return true;
+    }
+
+    function findRPM(text, lines = []) {
+      const normalized = String(text || '');
+
+      let match = normalized.match(/\b(\d{3,4})\s*(?:RPM|R\/MIN|\/MIN)\b/i);
+      if (match) return sanitizeRPM(match[1]);
+
+      for (const line of lines) {
+        if (/RPM|\/MIN|R\/MIN/i.test(line)) {
+          match = line.match(/(\d{3,4})/);
+          if (match) return sanitizeRPM(match[1]);
+        }
+      }
+
+      const possible = normalized.match(/\b(680|870|930|1140|1165|1720|1730|1740|1750|1760|3450|3500|3550)\b/g);
+      if (possible && possible.length) return sanitizeRPM(possible[0]);
+
+      return '-';
+    }
+
+    function sanitizeRPM(value) {
+      const clean = String(value || '').replace(/\D/g, '');
+      if (!clean) return '-';
+      return clean.slice(0, 4);
+    }
+
+    function findVoltage(text, lines = []) {
+      const normalizedText = String(text || '')
+        .replace(/O/g, '0')
+        .replace(/I/g, '1')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      let match = normalizedText.match(/\b(\d{2,4}\s*[\/\-]\s*\d{2,4}|\d{2,4})\s*V\b/i);
+      if (match) return fixVoltage(match[1]);
+
+      match = normalizedText.match(/\bV\s*[:\-]?\s*(\d{2,4}(?:\s*[\/\-]\s*\d{2,4})?)\b/i);
+      if (match) return fixVoltage(match[1]);
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = String(lines[i] || '').replace(/O/g, '0').replace(/I/g, '1').trim();
+
+        if (/^\s*V\s*$/i.test(line)) {
+          const next1 = String(lines[i + 1] || '').replace(/O/g, '0').replace(/I/g, '1').trim();
+          const next2 = String(lines[i + 2] || '').replace(/O/g, '0').replace(/I/g, '1').trim();
+
+          let nextMatch = next1.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\b/);
+          if (nextMatch) return nextMatch[1];
+
+          nextMatch = next2.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\b/);
+          if (nextMatch) return nextMatch[1];
+        }
+
+        if (/V|110|127|220|230|240|380|400|415|440|460|660/i.test(line)) {
+          match = line.match(/(\d{2,4}\s*[\/\-]\s*\d{2,4})/);
+          if (match) return fixVoltage(match[1]);
+
+          const single = line.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\s*V?\b/i);
+          if (single) return single[1];
+        }
+      }
+
+      const commonVoltages = normalizedText.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\b/g);
+      if (commonVoltages && commonVoltages.length) {
+        return commonVoltages[commonVoltages.length - 1];
+      }
+
+      return '-';
+    }
+
+    function fixVoltage(value) {
+      let clean = String(value).replace(/\s+/g, '').replace('-', '/').replace(/[^\d/]/g, '');
+      if (!clean) return '-';
+
+      const parts = clean.split('/');
+
+      if (parts.length === 1) {
+        const single = parts[0];
+        if (['110', '127', '220', '230', '240', '380', '400', '415', '440', '460', '660'].includes(single)) {
+          return single;
+        }
+        return single.length > 4 ? single.slice(0, 4) : single;
+      }
+
+      let a = parts[0];
+      let b = parts[1];
+
+      if (a === '20' && b === '380') a = '220';
+      if (a === '2' && b === '380') a = '220';
+      if (a === '2200' && b === '380') a = '220';
+      if (a.length > 3) a = a.slice(0, 3);
+      if (b.length > 3) b = b.slice(0, 3);
+
+      return a && b ? `${a}/${b}` : '-';
+    }
+
+    function findPower(text, lines = []) {
+      let match = text.match(/\b(\d+[\.,]?\d*)\s*kW\b/i);
+      if (match) return normalizePowerValue(match[1]) + ' kW';
+
+      match = text.match(/\b(\d+[\.,]?\d*)\s*(?:CV|HP)\b/i);
+      if (match) {
+        const unit = /CV/i.test(match[0]) ? ' CV' : ' HP';
+        return normalizePowerValue(match[1]) + unit;
+      }
+
+      for (const line of lines) {
+        if (/kW|kw|CV|cv|HP|hp/i.test(line)) {
+          match = line.match(/(\d+[\.,]?\d*)\s*kW/i);
+          if (match) return normalizePowerValue(match[1]) + ' kW';
+
+          match = line.match(/(\d+[\.,]?\d*)\s*CV/i);
+          if (match) return normalizePowerValue(match[1]) + ' CV';
+
+          match = line.match(/(\d+[\.,]?\d*)\s*HP/i);
+          if (match) return normalizePowerValue(match[1]) + ' HP';
+        }
+      }
+
+      const compactText = text.replace(/\s+/g, '').toLowerCase();
+      const looseGlobal = compactText.match(/(\d+[\.,]?\d*)(?:kw|cv|hp)\b/);
+      if (looseGlobal) {
+        if (compactText.includes('kw')) return normalizePowerValue(looseGlobal[1]) + ' kW';
+        if (compactText.includes('cv')) return normalizePowerValue(looseGlobal[1]) + ' CV';
+        if (compactText.includes('hp')) return normalizePowerValue(looseGlobal[1]) + ' HP';
+      }
+
+      return '-';
+    }
+
+    function normalizePowerValue(value) {
+      return String(value).replace(',', '.');
+    }
+
+    function extractPowerTextFromRawText(text) {
+      if (!text) return '-';
+
+      const normalized = String(text)
+        .replace(/O/g, '0')
+        .replace(/,/g, '.');
+
+      let match = normalized.match(/kW\s*(\d+(?:\.\d+)?)/i);
+      if (match) return `${match[1]} kW`;
+
+      match = normalized.match(/(\d+(?:\.\d+)?)\s*kW/i);
+      if (match) return `${match[1]} kW`;
+
+      match = normalized.match(/cv\s*(\d+(?:\.\d+)?)/i);
+      if (match) return `${match[1]} CV`;
+
+      match = normalized.match(/(\d+(?:\.\d+)?)\s*cv/i);
+      if (match) return `${match[1]} CV`;
+
+      match = normalized.match(/hp\s*(\d+(?:\.\d+)?)/i);
+      if (match) return `${match[1]} HP`;
+
+      match = normalized.match(/(\d+(?:\.\d+)?)\s*hp/i);
+      if (match) return `${match[1]} HP`;
+
+      return '-';
+    }
+
+    function extractVoltageFromRawText(text) {
+      if (!text) return '-';
+
+      const normalized = String(text)
+        .replace(/O/g, '0')
+        .replace(/I/g, '1')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      let match = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\s*V\b/i);
+      if (match) return match[1];
+
+      match = normalized.match(/\bV\s*[:\-]?\s*(110|127|220|230|240|380|400|415|440|460|660)\b/i);
+      if (match) return match[1];
+
+      match = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460)\s*[\/\-]\s*(220|230|240|380|400|415|440|460|660)\b/i);
+      if (match) return `${match[1]}/${match[2]}`;
+
+      const voltages = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\b/g);
+      if (voltages && voltages.length) return voltages[voltages.length - 1];
+
+      return '-';
+    }
+
+    function fillResults(parsed) {
+      fields.fabricante.textContent = parsed.fabricante || '-';
+      fields.modelo.textContent = parsed.modelo || '-';
+      fields.rpm.textContent = parsed.rpm || '-';
+      fields.tensao.textContent = parsed.tensao || '-';
+      fields.potencia.textContent = parsed.potencia || '-';
+    }
+
+    function clearResults() {
+      rawTextArea.value = '';
+      fillResults({
+        fabricante: '-',
+        modelo: '-',
+        rpm: '-',
+        tensao: '-',
+        potencia: '-'
+      });
+    }
+
+    function restoreSavedImage() {
+      const savedImage = localStorage.getItem('ecochain_uploaded_image');
+      if (!savedImage) return;
+
+      const img = new Image();
+      img.onload = () => {
+        currentImage = img;
+        previewBox.innerHTML = '';
+        previewBox.appendChild(img);
+        processBtn.disabled = false;
+      };
+      img.src = savedImage;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      restoreSavedImage();
+    });
+  </script>
+</body>
+
+</html>

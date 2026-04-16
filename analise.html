@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LumiUS - Análise Inteligente</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-1: #06142b;
+      --bg-2: #0a1f47;
+      --bg-3: #081326;
+      --panel: rgba(8, 20, 44, 0.88);
+      --panel-strong: rgba(9, 23, 51, 0.96);
+      --panel-soft: rgba(17, 35, 69, 0.9);
+      --border: rgba(92, 128, 184, 0.28);
+      --border-strong: rgba(111, 152, 219, 0.42);
+      --text: #f5f9ff;
+      --muted: #b8c7e3;
+      --muted-2: #8ea3c7;
+      --accent: #4aa3ff;
+      --accent-2: #28c76f;
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(47, 97, 190, 0.22), transparent 28%),
+        radial-gradient(circle at top right, rgba(18, 111, 255, 0.10), transparent 20%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2) 48%, var(--bg-3));
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    .page-shell {
+      width: 100%;
+      max-width: 1660px;
+      margin: 0 auto;
+      padding: 18px 22px 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      background: rgba(7, 17, 39, 0.55);
+      backdrop-filter: blur(10px);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .brand-mark::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #28c76f, #79f2a7);
+      box-shadow: 0 0 18px rgba(40, 199, 111, 0.4);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 38px;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .brand p {
+      margin: 0;
+      max-width: 920px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .nav-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 14px;
+      border: 1px solid var(--border-strong);
+      background: linear-gradient(180deg, rgba(29, 53, 96, 0.95), rgba(20, 37, 69, 0.95));
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .nav-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(132, 171, 234, 0.7);
+      background: linear-gradient(180deg, rgba(35, 64, 116, 0.98), rgba(24, 45, 84, 0.98));
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hero-card,
+    .panel {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 22px 24px;
+    }
+
+    .hero-card h2 {
+      margin: 0 0 10px;
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 840px;
+    }
+
+    .hero-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(14, 31, 61, 0.72);
+      border: 1px solid rgba(106, 141, 201, 0.18);
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted-2);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    .hero-side {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      background:
+        radial-gradient(circle at top right, rgba(40, 199, 111, 0.10), transparent 40%),
+        var(--panel);
+    }
+
+    .hero-side h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .hero-side p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .hero-tags {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hero-tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(25, 54, 102, 0.72);
+      border: 1px solid rgba(103, 144, 214, 0.26);
+      color: #d7e6ff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .panel-title-group h2 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-title-group p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(21, 46, 85, 0.82);
+      border: 1px solid rgba(94, 130, 189, 0.22);
+      color: #cfe0ff;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    select,
+    button {
+      min-height: 46px;
+      border-radius: 14px;
+      border: 1px solid var(--border-strong);
+      background: linear-gradient(180deg, rgba(24, 44, 80, 0.98), rgba(16, 31, 59, 0.98));
+      color: var(--text);
+      padding: 0 14px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    button {
+      cursor: pointer;
+      transition: transform 0.18s ease, opacity 0.18s ease, border-color 0.18s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(131, 172, 236, 0.72);
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .result-item {
+      background: rgba(10, 27, 55, 0.82);
+      border: 1px solid rgba(88, 121, 178, 0.24);
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 94px;
+    }
+
+    .label {
+      font-size: 11px;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+    }
+
+    .value {
+      font-size: 27px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      word-break: break-word;
+      line-height: 1.05;
+    }
+
+    .value.small {
+      font-size: 22px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 230px;
+      resize: vertical;
+      border-radius: 18px;
+      border: 1px solid rgba(97, 132, 191, 0.3);
+      background: rgba(3, 12, 28, 0.96);
+      color: #dbe8ff;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.55;
+      outline: none;
+    }
+
+    .status {
+      margin-top: 10px;
+      padding: 15px 16px;
+      border-radius: 16px;
+      background: rgba(26, 42, 75, 0.9);
+      border: 1px solid rgba(96, 129, 184, 0.3);
+      white-space: pre-wrap;
+      line-height: 1.45;
+      color: #e4eeff;
+    }
+
+    @media (max-width: 1280px) {
+      .hero,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .page-shell {
+        padding: 12px;
+      }
+
+      .topbar,
+      .hero-card,
+      .hero-side,
+      .panel {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .brand h1,
+      .brand-text h1 {
+        font-size: 30px;
+      }
+
+      .hero-metrics,
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .nav-link,
+      button,
+      select {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">Etapa 2 · análise inteligente</div>
+        <h1>LumiUS</h1>
+        <p>Diagnóstico, carbono e retrofit com base nos dados técnicos extraídos automaticamente da placa industrial.</p>
+      </div>
+
+      <div class="nav-actions">
+        <a class="nav-link" href="index.html">Voltar para OCR</a>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-card">
+        <h2>Da placa técnica para decisão estratégica</h2>
+        <p>
+          Esta etapa transforma os dados reconhecidos em inteligência operacional, estimando consumo, emissão de CO₂ e possíveis ações de retrofit com foco em eficiência e sustentabilidade.
+        </p>
+
+        <div class="hero-metrics">
+          <div class="metric">
+            <span>Etapa 2</span>
+            <strong>Análise técnica</strong>
+          </div>
+          <div class="metric">
+            <span>Base</span>
+            <strong>Dados do OCR</strong>
+          </div>
+          <div class="metric">
+            <span>Saída</span>
+            <strong>Diagnóstico inteligente</strong>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hero-side">
+        <div>
+          <h3>Leitura orientada a valor</h3>
+          <p>O sistema consolida os dados técnicos e apresenta uma análise com linguagem executiva, útil para apresentação, avaliação e tomada de decisão.</p>
+        </div>
+
+        <div class="hero-tags">
+          <span class="hero-tag">Consumo</span>
+          <span class="hero-tag">CO₂</span>
+          <span class="hero-tag">Retrofit</span>
+        </div>
+      </aside>
+    </section>
+
+    <main class="layout">
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2>Resumo da placa</h2>
+            <p>Dados técnicos capturados na etapa anterior e mantidos para a análise.</p>
+          </div>
+          <div class="pill">Entrada consolidada</div>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-item">
+            <div class="label">Fabricante</div>
+            <div class="value small" id="fabricante">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">Modelo</div>
+            <div class="value small" id="modelo">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">RPM</div>
+            <div class="value" id="rpm">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">Tensão</div>
+            <div class="value" id="tensao">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">Potência</div>
+            <div class="value small" id="potencia">-</div>
+          </div>
+        </div>
+
+        <textarea id="rawText" placeholder="O texto OCR ficará disponível aqui..." readonly></textarea>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2>Resultado da análise</h2>
+            <p>Consumo estimado, carbono e recomendações técnicas com base nos dados disponíveis.</p>
+          </div>
+          <div class="pill">Saída analítica</div>
+        </div>
+
+        <div class="controls">
+          <label for="machineType"><strong>Tipo de máquina:</strong></label>
+          <select id="machineType">
+            <option value="auto">Detectar automaticamente</option>
+            <option value="motor_industrial">Motor industrial</option>
+            <option value="painel_eletrico">Painel elétrico</option>
+            <option value="compressor">Compressor</option>
+          </select>
+
+          <button id="recalculateBtn">Recalcular</button>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-item">
+            <div class="label">Máquina identificada</div>
+            <div class="value small" id="machineDetected">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">Consumo estimado</div>
+            <div class="value small" id="consumoKwh">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">CO₂ por hora</div>
+            <div class="value small" id="co2Hora">-</div>
+          </div>
+
+          <div class="result-item">
+            <div class="label">Idade média</div>
+            <div class="value small" id="idadeMedia">-</div>
+          </div>
+        </div>
+
+        <textarea id="retrofitText" placeholder="As recomendações de retrofit aparecerão aqui..." readonly></textarea>
+        <div class="status" id="status">Carregando dados...</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const fields = {
+      fabricante: document.getElementById('fabricante'),
+      modelo: document.getElementById('modelo'),
+      rpm: document.getElementById('rpm'),
+      tensao: document.getElementById('tensao'),
+      potencia: document.getElementById('potencia'),
+      rawText: document.getElementById('rawText')
+    };
+
+    const ecoFields = {
+      machineType: document.getElementById('machineType'),
+      machineDetected: document.getElementById('machineDetected'),
+      consumoKwh: document.getElementById('consumoKwh'),
+      co2Hora: document.getElementById('co2Hora'),
+      idadeMedia: document.getElementById('idadeMedia'),
+      retrofitText: document.getElementById('retrofitText'),
+      status: document.getElementById('status'),
+      recalculateBtn: document.getElementById('recalculateBtn')
+    };
+
+    const machinesDb = {
+      motor_industrial: { consumo_kwh: 50, co2_factor: 0.5, idade_media: 10, label: 'Motor industrial' },
+      painel_eletrico: { consumo_kwh: 20, co2_factor: 0.4, idade_media: 8, label: 'Painel elétrico' },
+      compressor: { consumo_kwh: 80, co2_factor: 0.6, idade_media: 12, label: 'Compressor' }
+    };
+
+    const manufacturerAges = {
+      WEG: 8,
+      SIEMENS: 10,
+      ABB: 9,
+      SCHNEIDER: 7,
+      VOGES: 11,
+      SEW: 9,
+      DANFOSS: 8,
+      Desconhecido: 10
+    };
+
+    let parsed = null;
+    let rawText = '';
+
+    ecoFields.recalculateBtn.addEventListener('click', () => {
+      if (!parsed) {
+        ecoFields.status.textContent = 'Nenhum dado disponível para recalcular.';
+        return;
+      }
+
+      runEcoChainAnalysis(parsed, rawText);
+      ecoFields.status.textContent = 'Análise recalculada com sucesso.';
+    });
+
+    initPage();
+
+    function initPage() {
+      const parsedStorage = localStorage.getItem('ecochain_parsed_data');
+      const rawStorage = localStorage.getItem('ecochain_raw_text');
+
+      if (!parsedStorage) {
+        ecoFields.status.textContent = 'Nenhum dado encontrado. Volte para a página inicial e processe uma imagem primeiro.';
+        clearPlateFields();
+        clearAnalysis();
+        return;
+      }
+
+      try {
+        parsed = JSON.parse(parsedStorage);
+        rawText = rawStorage || '';
+
+        fillPlateFields(parsed, rawText);
+        runEcoChainAnalysis(parsed, rawText);
+        ecoFields.status.textContent = 'Dados carregados com sucesso.';
+      } catch (error) {
+        ecoFields.status.textContent = 'Erro ao carregar os dados salvos.';
+        clearPlateFields();
+        clearAnalysis();
+      }
+    }
+
+    function fillPlateFields(parsedData, raw) {
+      fields.fabricante.textContent = parsedData.fabricante || '-';
+      fields.modelo.textContent = parsedData.modelo || '-';
+      fields.rpm.textContent = parsedData.rpm || '-';
+      fields.tensao.textContent = parsedData.tensao || '-';
+      fields.potencia.textContent = parsedData.potencia || '-';
+      fields.rawText.value = raw || '';
+    }
+
+    function clearPlateFields() {
+      fields.fabricante.textContent = '-';
+      fields.modelo.textContent = '-';
+      fields.rpm.textContent = '-';
+      fields.tensao.textContent = '-';
+      fields.potencia.textContent = '-';
+      fields.rawText.value = '';
+    }
+
+    function clearAnalysis() {
+      ecoFields.machineDetected.textContent = '-';
+      ecoFields.consumoKwh.textContent = '-';
+      ecoFields.co2Hora.textContent = '-';
+      ecoFields.idadeMedia.textContent = '-';
+      ecoFields.retrofitText.value = '';
+    }
+
+    function extractNumericValue(value) {
+      if (!value || value === '-') return 0;
+      const normalized = String(value).replace(',', '.');
+      const match = normalized.match(/\d+(?:\.\d+)?/);
+      return match ? Number(match[0]) : 0;
+    }
+
+    function extractNumericKw(powerText) {
+      if (!powerText || powerText === '-') return 0;
+
+      const normalized = String(powerText).replace(',', '.').toLowerCase();
+      const match = normalized.match(/\d+(?:\.\d+)?/);
+      if (!match) return 0;
+
+      let value = Number(match[0]);
+
+      if (normalized.includes('hp')) value = value * 0.746;
+      if (normalized.includes('cv')) value = value * 0.7355;
+
+      return value;
+    }
+
+    function extractPowerFromRawText(text) {
+      if (!text) return 0;
+
+      const normalized = String(text)
+        .replace(/O/g, '0')
+        .replace(/,/g, '.');
+
+      let match = normalized.match(/kW\s*(\d+(?:\.\d+)?)/i);
+      if (match) return Number(match[1]);
+
+      match = normalized.match(/(\d+(?:\.\d+)?)\s*kW/i);
+      if (match) return Number(match[1]);
+
+      match = normalized.match(/cv\s*(\d+(?:\.\d+)?)/i);
+      if (match) return Number(match[1]) * 0.7355;
+
+      match = normalized.match(/(\d+(?:\.\d+)?)\s*cv/i);
+      if (match) return Number(match[1]) * 0.7355;
+
+      match = normalized.match(/hp\s*(\d+(?:\.\d+)?)/i);
+      if (match) return Number(match[1]) * 0.746;
+
+      match = normalized.match(/(\d+(?:\.\d+)?)\s*hp/i);
+      if (match) return Number(match[1]) * 0.746;
+
+      return 0;
+    }
+
+    function extractVoltageFromRawText(text) {
+      if (!text) return '-';
+
+      const normalized = String(text)
+        .replace(/O/g, '0')
+        .replace(/I/g, '1')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      let match = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\s*V\b/i);
+      if (match) return match[1];
+
+      match = normalized.match(/\bV\s*[:\-]?\s*(110|127|220|230|240|380|400|415|440|460|660)\b/i);
+      if (match) return match[1];
+
+      match = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460)\s*[\/\-]\s*(220|230|240|380|400|415|440|460|660)\b/i);
+      if (match) return `${match[1]}/${match[2]}`;
+
+      const voltages = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\b/g);
+      if (voltages && voltages.length) return voltages[voltages.length - 1];
+
+      return '-';
+    }
+
+    function identifyMachineFromText(parsedData, text) {
+      const forcedType = ecoFields.machineType.value;
+      if (forcedType !== 'auto') return forcedType;
+
+      const all = `${text} ${parsedData.modelo} ${parsedData.fabricante}`.toLowerCase();
+
+      if (all.includes('compressor')) return 'compressor';
+      if (all.includes('panel') || all.includes('painel') || all.includes('quadro')) return 'painel_eletrico';
+      if (all.includes('motor') || all.includes('rpm') || all.includes('/min') || parsedData.rpm !== '-') return 'motor_industrial';
+
+      return 'motor_industrial';
+    }
+
+    function estimateConsumption(machineType, parsedData, text = '') {
+      let powerKw = extractNumericKw(parsedData.potencia);
+
+      if (powerKw <= 0) {
+        powerKw = extractPowerFromRawText(text);
+      }
+
+      const rpm = extractNumericValue(parsedData.rpm);
+
+      let voltageText = String(parsedData.tensao || '');
+      if (!voltageText || voltageText === '-') {
+        voltageText = extractVoltageFromRawText(text);
+      }
+
+      const hasDualVoltage = voltageText.includes('/');
+
+      if (powerKw <= 0) return 0;
+
+      let estimated = powerKw;
+
+      if (machineType === 'motor_industrial' && rpm >= 1700) estimated *= 1.08;
+      if (machineType === 'compressor') estimated *= 1.20;
+      if (machineType === 'painel_eletrico') estimated *= 0.55;
+      if (hasDualVoltage) estimated *= 1.03;
+
+      return Number(estimated.toFixed(2));
+    }
+
+    function estimateAge(parsedData, base) {
+      const manufacturer = parsedData.fabricante || 'Desconhecido';
+      const mappedAge = manufacturerAges[manufacturer] ?? base.idade_media;
+      const model = String(parsedData.modelo || '').toUpperCase();
+
+      if (model.includes('W22') || model.includes('90S')) return Math.max(6, mappedAge - 1);
+      if (model.includes('1LA7')) return mappedAge;
+
+      return mappedAge;
+    }
+
+    function carbonTranslation(machineType, parsedData, text = '') {
+      const base = machinesDb[machineType];
+      const consumo = estimateConsumption(machineType, parsedData, text);
+      const co2PerHour = consumo * base.co2_factor;
+      const idade = estimateAge(parsedData, base);
+
+      return {
+        consumo_kwh: Number(consumo.toFixed(2)),
+        co2_por_hora: Number(co2PerHour.toFixed(2)),
+        idade_media: idade,
+        label: base.label
+      };
+    }
+
+    function retrofitRecommendation(machineType, parsedData, carbonData, text = '') {
+      const recommendations = [];
+
+      let powerKw = extractNumericKw(parsedData.potencia);
+      if (powerKw <= 0) {
+        powerKw = extractPowerFromRawText(text);
+      }
+
+      const rpm = extractNumericValue(parsedData.rpm);
+
+      if (carbonData.consumo_kwh > 10) {
+        recommendations.push('Instalar inversor de frequência');
+      }
+
+      if (carbonData.idade_media > 10) {
+        recommendations.push('Adicionar sensores de vibração e temperatura');
+      }
+
+      if (powerKw >= 3) {
+        recommendations.push('Avaliar motor de alto rendimento para reduzir consumo');
+      }
+
+      if (rpm >= 1700) {
+        recommendations.push('Revisar regime de operação e balanceamento mecânico');
+      }
+
+      if (recommendations.length === 0) {
+        recommendations.push('Manter plano de inspeção e monitoramento preventivo');
+      }
+
+      recommendations.push('Implementar monitoramento IoT em tempo real');
+
+      return recommendations;
+    }
+
+    function runEcoChainAnalysis(parsedData, text) {
+      const machineType = identifyMachineFromText(parsedData, text);
+      const carbonData = carbonTranslation(machineType, parsedData, text);
+      const upgrades = retrofitRecommendation(machineType, parsedData, carbonData, text);
+
+      ecoFields.machineDetected.textContent = carbonData.label;
+      ecoFields.consumoKwh.textContent = `${carbonData.consumo_kwh} kWh`;
+      ecoFields.co2Hora.textContent = `${carbonData.co2_por_hora} kg`;
+      ecoFields.idadeMedia.textContent = `${carbonData.idade_media} anos`;
+      ecoFields.retrofitText.value = upgrades.map(item => `- ${item}`).join('\n');
+    }
+  </script>
+</body>
+</html>
