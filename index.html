@@ -1203,70 +1203,62 @@
     }
 
     function findPower(text, lines = []) {
-      let match = text.match(/\b(\d+[\.,]?\d*)\s*kW\b/i);
-      if (match) return normalizePowerValue(match[1]) + ' kW';
+    const normalizedText = String(text || '')
+    .replace(/O/g, '0')
+    .replace(/,/g, '.');
 
-      match = text.match(/\b(\d+[\.,]?\d*)\s*(?:CV|HP)\b/i);
-      if (match) {
-        const unit = /CV/i.test(match[0]) ? ' CV' : ' HP';
-        return normalizePowerValue(match[1]) + unit;
-      }
+    let match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*kW\b/i);
+    if (match) return `${match[1]} kW`;
 
-      for (const line of lines) {
-        if (/kW|kw|CV|cv|HP|hp/i.test(line)) {
-          match = line.match(/(\d+[\.,]?\d*)\s*kW/i);
-          if (match) return normalizePowerValue(match[1]) + ' kW';
+    match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*CV\b/i);
+    if (match) return `${match[1]} CV`;
 
-          match = line.match(/(\d+[\.,]?\d*)\s*CV/i);
-          if (match) return normalizePowerValue(match[1]) + ' CV';
+    match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*HP\b/i);
+    if (match) return `${match[1]} HP`;
 
-          match = line.match(/(\d+[\.,]?\d*)\s*HP/i);
-          if (match) return normalizePowerValue(match[1]) + ' HP';
-        }
-      }
+    for (const rawLine of lines) {
+    const line = String(rawLine || '')
+      .replace(/O/g, '0')
+      .replace(/,/g, '.')
+      .trim();
 
-      const compactText = text.replace(/\s+/g, '').toLowerCase();
-      const looseGlobal = compactText.match(/(\d+[\.,]?\d*)(?:kw|cv|hp)\b/);
-      if (looseGlobal) {
-        if (compactText.includes('kw')) return normalizePowerValue(looseGlobal[1]) + ' kW';
-        if (compactText.includes('cv')) return normalizePowerValue(looseGlobal[1]) + ' CV';
-        if (compactText.includes('hp')) return normalizePowerValue(looseGlobal[1]) + ' HP';
-      }
+    if (/V\b|VOLT/i.test(line)) continue;
 
-      return '-';
-    }
+    match = line.match(/\b(\d+(?:\.\d+)?)\s*kW\b/i);
+    if (match) return `${match[1]} kW`;
+
+    match = line.match(/\b(\d+(?:\.\d+)?)\s*CV\b/i);
+    if (match) return `${match[1]} CV`;
+
+    match = line.match(/\b(\d+(?:\.\d+)?)\s*HP\b/i);
+    if (match) return `${match[1]} HP`;
+  }
+
+  return '-';
+}
 
     function normalizePowerValue(value) {
       return String(value).replace(',', '.');
     }
 
-    function extractPowerTextFromRawText(text) {
-      if (!text) return '-';
+   function extractPowerTextFromRawText(text) {
+   if (!text) return '-';
 
-      const normalized = String(text)
-        .replace(/O/g, '0')
-        .replace(/,/g, '.');
+  const normalized = String(text)
+  .replace(/O/g, '0')
+  .replace(/,/g, '.');
 
-      let match = normalized.match(/kW\s*(\d+(?:\.\d+)?)/i);
-      if (match) return `${match[1]} kW`;
+  let match = normalized.match(/\b(\d+(?:\.\d+)?)\s*kW\b/i);
+  if (match) return `${match[1]} kW`;
 
-      match = normalized.match(/(\d+(?:\.\d+)?)\s*kW/i);
-      if (match) return `${match[1]} kW`;
+  match = normalized.match(/\b(\d+(?:\.\d+)?)\s*CV\b/i);
+  if (match) return `${match[1]} CV`;
 
-      match = normalized.match(/cv\s*(\d+(?:\.\d+)?)/i);
-      if (match) return `${match[1]} CV`;
+  match = normalized.match(/\b(\d+(?:\.\d+)?)\s*HP\b/i);
+  if (match) return `${match[1]} HP`;
 
-      match = normalized.match(/(\d+(?:\.\d+)?)\s*cv/i);
-      if (match) return `${match[1]} CV`;
-
-      match = normalized.match(/hp\s*(\d+(?:\.\d+)?)/i);
-      if (match) return `${match[1]} HP`;
-
-      match = normalized.match(/(\d+(?:\.\d+)?)\s*hp/i);
-      if (match) return `${match[1]} HP`;
-
-      return '-';
-    }
+  return '-';
+}
 
     function extractVoltageFromRawText(text) {
       if (!text) return '-';
