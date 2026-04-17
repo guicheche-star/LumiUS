@@ -683,7 +683,16 @@
       potencia: document.getElementById('potencia')
     };
 
-    const KNOWN_MANUFACTURERS = ['WEG', 'SIEMENS', 'ABB', 'SCHNEIDER', 'VOGES', 'SEW', 'DANFOSS'];
+    const KNOWN_MANUFACTURERS = [
+      'WEG', 'SIEMENS', 'ABB', 'SCHNEIDER', 'SCHNEIDER ELECTRIC', 'VOGES', 'SEW', 'SEW-EURODRIVE', 'DANFOSS',
+      'KENTFRIO', 'ELETROMEC', 'EMBRACO', 'COEL', 'METALFRIO', 'CONSUL', 'BRASTEMP', 'SPRINGER', 'CARRIER',
+      'TRANE', 'ELGIN', 'MIDEA', 'LG', 'SAMSUNG', 'GE', 'TOSHIBA', 'HITACHI', 'YORK', 'COPELAND', 'BITZER',
+      'FRASCOLD', 'FAMAC', 'LEÃO', 'LEAO', 'KSB', 'SCHULZ', 'ATLAS COPCO', 'BOSCH', 'FESTO', 'PHILIPS',
+      'EATON', 'LEGRAND', 'INTELBRAS', 'JNG', 'NIDEC', 'BALDOR', 'TACO', 'DAB', 'GRUNDFOS', 'EBARA', 'TIGRE'
+    ];
+    const MODEL_LABELS = ['MODELO', 'MODEL', 'MOD', 'MOD.', 'TYPE', 'TIPO', 'REF', 'REFERENCIA', 'REFERÊNCIA'];
+    const VOLTAGE_LABELS = ['TENSAO', 'TENSÃO', 'TENSAO NOMINAL', 'TENSÃO NOMINAL', 'VOLTAGEM', 'VOLTAGE', 'VOLTS', 'V'];
+    const POWER_LABELS = ['POTENCIA', 'POTÊNCIA', 'POWER', 'OUTPUT', 'POT'];
     const PROCESS_WIDTH = 1600;
     const DOWNLOAD_MODE = 'grayscale';
 
@@ -759,29 +768,38 @@
 
         statusBox.textContent = 'Lendo região do fabricante...';
         const brandRegion = cropCanvas(processed.grayscale, {
-          x: 0.16, y: 0.02, w: 0.68, h: 0.19
+          x: 0.04, y: 0.00, w: 0.92, h: 0.24
         });
         const brandText = await recognizeCanvas(brandRegion, {
           psm: 7,
-          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-/& '
         });
 
         statusBox.textContent = 'Lendo região de modelo...';
         const modelRegion = cropCanvas(processed.grayscale, {
-          x: 0.00, y: 0.18, w: 0.52, h: 0.30
+          x: 0.00, y: 0.12, w: 0.70, h: 0.36
         });
         const modelText = await recognizeCanvas(modelRegion, {
           psm: 6,
-          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-/: '
+          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-/: '
         });
 
         statusBox.textContent = 'Lendo região de dados técnicos...';
         const specRegion = cropCanvas(processed.binary, {
-          x: 0.34, y: 0.17, w: 0.66, h: 0.42
+          x: 0.12, y: 0.14, w: 0.84, h: 0.50
         });
         const specText = await recognizeCanvas(specRegion, {
           psm: 6,
-          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,:/- kKwWhHpPrRmMvVcC'
+          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,:/- kKwWhHpPrRmMvVcCAaHz'
+        });
+
+        statusBox.textContent = 'Lendo região técnica complementar...';
+        const lowerSpecRegion = cropCanvas(processed.grayscale, {
+          x: 0.00, y: 0.26, w: 1.00, h: 0.54
+        });
+        const lowerSpecText = await recognizeCanvas(lowerSpecRegion, {
+          psm: 6,
+          whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,:/- kKwWhHpPrRmMvVcCAaHz'
         });
 
         const textBundle = {
@@ -789,7 +807,8 @@
           fullBinaryText,
           brandText,
           modelText,
-          specText
+          specText,
+          lowerSpecText
         };
 
         const combinedText = combineTexts(textBundle);
@@ -980,6 +999,7 @@
         bundle.brandText,
         bundle.modelText,
         bundle.specText,
+        bundle.lowerSpecText,
         bundle.fullGrayText,
         bundle.fullBinaryText
       ]
@@ -1045,45 +1065,72 @@
     }
 
     function findManufacturer(text) {
-      const upper = String(text || '').toUpperCase();
-
-      for (const fab of KNOWN_MANUFACTURERS) {
-        if (upper.includes(fab)) return fab;
-      }
-
+      const upper = normalizeText(text).toUpperCase();
       const softened = upper
         .replace(/0/g, 'O')
         .replace(/1/g, 'I')
         .replace(/5/g, 'S')
         .replace(/8/g, 'B');
 
-      for (const fab of KNOWN_MANUFACTURERS) {
-        if (softened.includes(fab)) return fab;
+      for (const fab of KNOWN_MANUFACTURERS.sort((a, b) => b.length - a.length)) {
+        if (upper.includes(fab) || softened.includes(fab)) return fab;
+      }
+
+      const lines = splitUsefulLines(upper).slice(0, 6);
+      for (const line of lines) {
+        const cleaned = line.replace(/[^A-Z0-9/& .-]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!cleaned) continue;
+        if (MODEL_LABELS.some(label => cleaned.includes(label))) continue;
+        if (VOLTAGE_LABELS.some(label => cleaned.includes(label))) continue;
+        if (POWER_LABELS.some(label => cleaned.includes(label))) continue;
+        if (/^INDUSTRIA|CNPJ|SERIE|S[ÉE]RIE|FABRICA[CÇ][AÃ]O|DATA/.test(cleaned)) continue;
+
+        const words = cleaned.split(' ').filter(Boolean);
+        if (words.length >= 1 && words.length <= 4 && /[A-Z]{3,}/.test(cleaned)) {
+          return cleaned;
+        }
       }
 
       return 'Desconhecido';
     }
 
     function findModel(text, lines = []) {
-      const upperText = String(text || '').toUpperCase();
+      const normalizedText = normalizeText(text).toUpperCase();
 
-      let match = upperText.match(/(?:MOD\.?|MODELO|MODEL|TYPE)\s*[:.]?\s*([A-Z0-9\-\/\.]{2,20})/i);
-      if (match) {
-        const cleaned = cleanupModel(match[1]);
-        if (isValidModel(cleaned)) return cleaned;
-      }
+      const directMatchers = [
+        /(?:MODELO|MODEL|TYPE|TIPO|MOD\.?|REF(?:ERENCIA|ERÊNCIA)?)\s*[:.\-]?\s*([^\n]{2,48})/i,
+        /(?:MODELO|MODEL|TYPE|TIPO|MOD\.?|REF(?:ERENCIA|ERÊNCIA)?)\s*\n\s*([^\n]{2,48})/i
+      ];
 
-      for (const line of lines) {
-        if (/(MOD\.?|MODELO|MODEL|TYPE)/i.test(line)) {
-          const m = line.match(/([A-Z0-9][A-Z0-9\-\/\.]{2,20})/i);
-          if (m) {
-            const cleaned = cleanupModel(m[1]);
-            if (isValidModel(cleaned)) return cleaned;
-          }
+      for (const regex of directMatchers) {
+        const match = normalizedText.match(regex);
+        if (match) {
+          const cleaned = cleanupModel(match[1]);
+          if (isValidModel(cleaned)) return cleaned;
         }
       }
 
-      const candidates = upperText.match(/\b[A-Z0-9]{2,}[A-Z0-9\-\/\.]{1,12}\b/g) || [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = normalizeText(lines[i]).toUpperCase();
+        const nextLine = normalizeText(lines[i + 1] || '').toUpperCase();
+
+        if (MODEL_LABELS.some(label => line.includes(label))) {
+          const sameLine = line.split(/MODELO|MODEL|TYPE|TIPO|MOD\.?|REF(?:ERENCIA|ERÊNCIA)?/i).pop() || '';
+          const sameLineModel = cleanupModel(sameLine);
+          if (isValidModel(sameLineModel)) return sameLineModel;
+
+          const nextLineModel = cleanupModel(nextLine);
+          if (isValidModel(nextLineModel)) return nextLineModel;
+        }
+
+        const tokens = line.match(/\b[A-Z0-9]+(?:[-/.][A-Z0-9]+)+\b/g) || [];
+        for (const token of tokens) {
+          const cleaned = cleanupModel(token);
+          if (isValidModel(cleaned)) return cleaned;
+        }
+      }
+
+      const candidates = normalizedText.match(/\b[A-Z0-9]{2,}(?:[-/.][A-Z0-9]{1,})+\b/g) || [];
       for (const candidate of candidates) {
         const cleaned = cleanupModel(candidate);
         if (isValidModel(cleaned)) return cleaned;
@@ -1094,21 +1141,25 @@
 
     function cleanupModel(value) {
       return String(value || '')
-        .replace(/^(MOD|MODEL|MODELO|TYPE)[\s.:/-]*/i, '')
-        .replace(/[^A-Z0-9\-\/\.]/gi, '')
+        .replace(/^(MOD|MODEL|MODELO|TYPE|TIPO|REF|REFERENCIA|REFERÊNCIA)[\s.:/-]*/i, '')
+        .replace(/\b(TENSAO|TENSAO|POTENCIA|POTÊNCIA|RPM|HZ|VOLTS?|VOLTAGE|CORRENTE|AMPERAGEM|A)\b.*$/i, '')
+        .replace(/[^A-Z0-9\-\/. ]/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
         .toUpperCase();
     }
 
     function isValidModel(value) {
       if (!value || value.length < 2) return false;
       if (KNOWN_MANUFACTURERS.includes(value)) return false;
-      if (/^(RPM|KW|CV|HP|HZ|V|A|IP)$/.test(value)) return false;
+      if (/^(RPM|KW|W|CV|HP|HZ|V|A|IP|N|CLASSE)$/.test(value)) return false;
       if (/^\d{4}$/.test(value)) return false;
-      return true;
+      if (!/[A-Z]/.test(value)) return false;
+      return /[A-Z]/.test(value) && /\d/.test(value) || value.length >= 5;
     }
 
     function findRPM(text, lines = []) {
-      const normalized = String(text || '');
+      const normalized = normalizeText(text);
 
       let match = normalized.match(/\b(\d{3,4})\s*(?:RPM|R\/MIN|\/MIN)\b/i);
       if (match) return sanitizeRPM(match[1]);
@@ -1133,38 +1184,32 @@
     }
 
     function findVoltage(text, lines = []) {
-      const normalizedText = String(text || '')
+      const normalizedText = normalizeText(text)
         .replace(/O/g, '0')
         .replace(/I/g, '1')
         .replace(/\s+/g, ' ')
         .trim();
 
-      let match = normalizedText.match(/\b(\d{2,4}\s*[\/\-]\s*\d{2,4}|\d{2,4})\s*V\b/i);
+      let match = normalizedText.match(/\b(\d{2,4}\s*[\/-]\s*\d{2,4}|\d{2,4})\s*V\b/i);
       if (match) return fixVoltage(match[1]);
 
-      match = normalizedText.match(/\bV\s*[:\-]?\s*(\d{2,4}(?:\s*[\/\-]\s*\d{2,4})?)\b/i);
+      match = normalizedText.match(/\b(?:TENSAO|TENSÃO|TENSAO NOMINAL|TENSÃO NOMINAL|VOLTAGEM|VOLTAGE|VOLTS?|V)\s*[:\-]?\s*(\d{2,4}(?:\s*[\/-]\s*\d{2,4})?)\b/i);
       if (match) return fixVoltage(match[1]);
 
       for (let i = 0; i < lines.length; i++) {
-        const line = String(lines[i] || '').replace(/O/g, '0').replace(/I/g, '1').trim();
+        const line = normalizeText(lines[i]).replace(/O/g, '0').replace(/I/g, '1').trim();
+        const next1 = normalizeText(lines[i + 1] || '').replace(/O/g, '0').replace(/I/g, '1').trim();
+        const next2 = normalizeText(lines[i + 2] || '').replace(/O/g, '0').replace(/I/g, '1').trim();
 
-        if (/^\s*V\s*$/i.test(line)) {
-          const next1 = String(lines[i + 1] || '').replace(/O/g, '0').replace(/I/g, '1').trim();
-          const next2 = String(lines[i + 2] || '').replace(/O/g, '0').replace(/I/g, '1').trim();
-
-          let nextMatch = next1.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\b/);
-          if (nextMatch) return nextMatch[1];
-
-          nextMatch = next2.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\b/);
-          if (nextMatch) return nextMatch[1];
-        }
-
-        if (/V|110|127|220|230|240|380|400|415|440|460|660/i.test(line)) {
-          match = line.match(/(\d{2,4}\s*[\/\-]\s*\d{2,4})/);
+        if (VOLTAGE_LABELS.some(label => line.toUpperCase().includes(label))) {
+          match = line.match(/(\d{2,4}\s*[\/-]\s*\d{2,4}|\d{2,4})/);
           if (match) return fixVoltage(match[1]);
 
-          const single = line.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\s*V?\b/i);
-          if (single) return single[1];
+          match = next1.match(/(\d{2,4}\s*[\/-]\s*\d{2,4}|110|127|220|230|240|380|400|415|440|460|660)/i);
+          if (match) return fixVoltage(match[1]);
+
+          match = next2.match(/(\d{2,4}\s*[\/-]\s*\d{2,4}|110|127|220|230|240|380|400|415|440|460|660)/i);
+          if (match) return fixVoltage(match[1]);
         }
       }
 
@@ -1203,67 +1248,79 @@
     }
 
     function findPower(text, lines = []) {
-    const normalizedText = String(text || '')
-    .replace(/O/g, '0')
-    .replace(/,/g, '.');
+      const normalizedText = normalizeText(text)
+        .replace(/O/g, '0')
+        .replace(/,/g, '.');
 
-    let match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*kW\b/i);
-    if (match) return `${match[1]} kW`;
+      let match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*kW\b/i);
+      if (match) return `${normalizePowerValue(match[1])} kW`;
 
-    match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*CV\b/i);
-    if (match) return `${match[1]} CV`;
+      match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*W\b/i);
+      if (match) return `${normalizePowerValue(match[1])} W`;
 
-    match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*HP\b/i);
-    if (match) return `${match[1]} HP`;
+      match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*CV\b/i);
+      if (match) return `${normalizePowerValue(match[1])} CV`;
 
-    for (const rawLine of lines) {
-    const line = String(rawLine || '')
-      .replace(/O/g, '0')
-      .replace(/,/g, '.')
-      .trim();
+      match = normalizedText.match(/\b(\d+(?:\.\d+)?)\s*HP\b/i);
+      if (match) return `${normalizePowerValue(match[1])} HP`;
 
-    if (/V\b|VOLT/i.test(line)) continue;
+      for (let i = 0; i < lines.length; i++) {
+        const line = normalizeText(lines[i])
+          .replace(/O/g, '0')
+          .replace(/,/g, '.')
+          .trim();
+        const nextLine = normalizeText(lines[i + 1] || '')
+          .replace(/O/g, '0')
+          .replace(/,/g, '.')
+          .trim();
 
-    match = line.match(/\b(\d+(?:\.\d+)?)\s*kW\b/i);
-    if (match) return `${match[1]} kW`;
+        if (POWER_LABELS.some(label => line.toUpperCase().includes(label))) {
+          match = line.match(/(\d+(?:\.\d+)?)\s*(kW|W|CV|HP)\b/i);
+          if (match) return `${normalizePowerValue(match[1])} ${match[2].toUpperCase()}`;
 
-    match = line.match(/\b(\d+(?:\.\d+)?)\s*CV\b/i);
-    if (match) return `${match[1]} CV`;
+          match = nextLine.match(/(\d+(?:\.\d+)?)\s*(kW|W|CV|HP)\b/i);
+          if (match) return `${normalizePowerValue(match[1])} ${match[2].toUpperCase()}`;
+        }
 
-    match = line.match(/\b(\d+(?:\.\d+)?)\s*HP\b/i);
-    if (match) return `${match[1]} HP`;
-  }
+        if (/V\b|VOLT/i.test(line)) continue;
 
-  return '-';
-}
+        match = line.match(/\b(\d+(?:\.\d+)?)\s*(kW|W|CV|HP)\b/i);
+        if (match) return `${normalizePowerValue(match[1])} ${match[2].toUpperCase()}`;
+      }
+
+      return '-';
+    }
 
     function normalizePowerValue(value) {
       return String(value).replace(',', '.');
     }
 
-   function extractPowerTextFromRawText(text) {
-   if (!text) return '-';
+    function extractPowerTextFromRawText(text) {
+      if (!text) return '-';
 
-  const normalized = String(text)
-  .replace(/O/g, '0')
-  .replace(/,/g, '.');
+      const normalized = normalizeText(text)
+        .replace(/O/g, '0')
+        .replace(/,/g, '.');
 
-  let match = normalized.match(/\b(\d+(?:\.\d+)?)\s*kW\b/i);
-  if (match) return `${match[1]} kW`;
+      let match = normalized.match(/\b(\d+(?:\.\d+)?)\s*kW\b/i);
+      if (match) return `${normalizePowerValue(match[1])} kW`;
 
-  match = normalized.match(/\b(\d+(?:\.\d+)?)\s*CV\b/i);
-  if (match) return `${match[1]} CV`;
+      match = normalized.match(/\b(\d+(?:\.\d+)?)\s*W\b/i);
+      if (match) return `${normalizePowerValue(match[1])} W`;
 
-  match = normalized.match(/\b(\d+(?:\.\d+)?)\s*HP\b/i);
-  if (match) return `${match[1]} HP`;
+      match = normalized.match(/\b(\d+(?:\.\d+)?)\s*CV\b/i);
+      if (match) return `${normalizePowerValue(match[1])} CV`;
 
-  return '-';
-}
+      match = normalized.match(/\b(\d+(?:\.\d+)?)\s*HP\b/i);
+      if (match) return `${normalizePowerValue(match[1])} HP`;
+
+      return '-';
+    }
 
     function extractVoltageFromRawText(text) {
       if (!text) return '-';
 
-      const normalized = String(text)
+      const normalized = normalizeText(text)
         .replace(/O/g, '0')
         .replace(/I/g, '1')
         .replace(/\s+/g, ' ')
@@ -1275,7 +1332,7 @@
       match = normalized.match(/\bV\s*[:\-]?\s*(110|127|220|230|240|380|400|415|440|460|660)\b/i);
       if (match) return match[1];
 
-      match = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460)\s*[\/\-]\s*(220|230|240|380|400|415|440|460|660)\b/i);
+      match = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460)\s*[\/-]\s*(220|230|240|380|400|415|440|460|660)\b/i);
       if (match) return `${match[1]}/${match[2]}`;
 
       const voltages = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\b/g);
