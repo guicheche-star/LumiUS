@@ -527,6 +527,11 @@
             <option value="motor_industrial">Motor industrial</option>
             <option value="painel_eletrico">Painel elétrico</option>
             <option value="compressor">Compressor</option>
+            <option value="refrigeracao">Refrigeração</option>
+            <option value="bomba">Bomba</option>
+            <option value="ventilacao">Ventilação</option>
+            <option value="transformador">Transformador</option>
+            <option value="maquina_generica">Máquina genérica</option>
           </select>
 
           <button id="recalculateBtn">Recalcular</button>
@@ -584,7 +589,12 @@
     const machinesDb = {
       motor_industrial: { consumo_kwh: 50, co2_factor: 0.5, idade_media: 10, label: 'Motor industrial' },
       painel_eletrico: { consumo_kwh: 20, co2_factor: 0.4, idade_media: 8, label: 'Painel elétrico' },
-      compressor: { consumo_kwh: 80, co2_factor: 0.6, idade_media: 12, label: 'Compressor' }
+      compressor: { consumo_kwh: 80, co2_factor: 0.6, idade_media: 12, label: 'Compressor' },
+      refrigeracao: { consumo_kwh: 18, co2_factor: 0.42, idade_media: 9, label: 'Sistema de refrigeração' },
+      bomba: { consumo_kwh: 30, co2_factor: 0.48, idade_media: 9, label: 'Bomba' },
+      ventilacao: { consumo_kwh: 12, co2_factor: 0.38, idade_media: 8, label: 'Ventilação industrial' },
+      transformador: { consumo_kwh: 25, co2_factor: 0.45, idade_media: 14, label: 'Transformador' },
+      maquina_generica: { consumo_kwh: 15, co2_factor: 0.4, idade_media: 10, label: 'Máquina genérica' }
     };
 
     const manufacturerAges = {
@@ -592,9 +602,24 @@
       SIEMENS: 10,
       ABB: 9,
       SCHNEIDER: 7,
+      'SCHNEIDER ELECTRIC': 7,
       VOGES: 11,
       SEW: 9,
+      'SEW-EURODRIVE': 9,
       DANFOSS: 8,
+      KENTFRIO: 7,
+      ELETROMEC: 8,
+      EMBRACO: 8,
+      METALFRIO: 9,
+      ELGIN: 8,
+      CARRIER: 10,
+      TRANE: 11,
+      COPELAND: 10,
+      BITZER: 10,
+      SCHULZ: 9,
+      KSB: 10,
+      GRUNDFOS: 9,
+      EBARA: 9,
       Desconhecido: 10
     };
 
@@ -681,9 +706,10 @@
       let value = Number(match[0]);
 
       if (normalized.includes('hp')) value = value * 0.746;
-      if (normalized.includes('cv')) value = value * 0.7355;
+      else if (normalized.includes('cv')) value = value * 0.7355;
+      else if (/\bw\b/.test(normalized) && !normalized.includes('kw')) value = value / 1000;
 
-      return value;
+      return Number(value.toFixed(4));
     }
 
     function extractPowerFromRawText(text) {
@@ -693,22 +719,16 @@
         .replace(/O/g, '0')
         .replace(/,/g, '.');
 
-      let match = normalized.match(/kW\s*(\d+(?:\.\d+)?)/i);
+      let match = normalized.match(/(\d+(?:\.\d+)?)\s*kW\b/i);
       if (match) return Number(match[1]);
 
-      match = normalized.match(/(\d+(?:\.\d+)?)\s*kW/i);
-      if (match) return Number(match[1]);
+      match = normalized.match(/(\d+(?:\.\d+)?)\s*W\b/i);
+      if (match) return Number(match[1]) / 1000;
 
-      match = normalized.match(/cv\s*(\d+(?:\.\d+)?)/i);
+      match = normalized.match(/(\d+(?:\.\d+)?)\s*cv\b/i);
       if (match) return Number(match[1]) * 0.7355;
 
-      match = normalized.match(/(\d+(?:\.\d+)?)\s*cv/i);
-      if (match) return Number(match[1]) * 0.7355;
-
-      match = normalized.match(/hp\s*(\d+(?:\.\d+)?)/i);
-      if (match) return Number(match[1]) * 0.746;
-
-      match = normalized.match(/(\d+(?:\.\d+)?)\s*hp/i);
+      match = normalized.match(/(\d+(?:\.\d+)?)\s*hp\b/i);
       if (match) return Number(match[1]) * 0.746;
 
       return 0;
@@ -729,7 +749,7 @@
       match = normalized.match(/\bV\s*[:\-]?\s*(110|127|220|230|240|380|400|415|440|460|660)\b/i);
       if (match) return match[1];
 
-      match = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460)\s*[\/\-]\s*(220|230|240|380|400|415|440|460|660)\b/i);
+      match = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460)\s*[\/-]\s*(220|230|240|380|400|415|440|460|660)\b/i);
       if (match) return `${match[1]}/${match[2]}`;
 
       const voltages = normalized.match(/\b(110|127|220|230|240|380|400|415|440|460|660)\b/g);
@@ -745,10 +765,14 @@
       const all = `${text} ${parsedData.modelo} ${parsedData.fabricante}`.toLowerCase();
 
       if (all.includes('compressor')) return 'compressor';
+      if (all.includes('transformador') || all.includes('transformer')) return 'transformador';
       if (all.includes('panel') || all.includes('painel') || all.includes('quadro')) return 'painel_eletrico';
+      if (all.includes('bomba') || all.includes('pump')) return 'bomba';
+      if (all.includes('ventilador') || all.includes('exaustor') || all.includes('fan') || all.includes('blower')) return 'ventilacao';
+      if (all.includes('bebedouro') || all.includes('refrigera') || all.includes('frio') || all.includes('r134a') || all.includes('r22') || all.includes('r410') || all.includes('r404')) return 'refrigeracao';
       if (all.includes('motor') || all.includes('rpm') || all.includes('/min') || parsedData.rpm !== '-') return 'motor_industrial';
 
-      return 'motor_industrial';
+      return 'maquina_generica';
     }
 
     function estimateConsumption(machineType, parsedData, text = '') {
@@ -767,13 +791,20 @@
 
       const hasDualVoltage = voltageText.includes('/');
 
-      if (powerKw <= 0) return 0;
+      if (powerKw <= 0) {
+        const fallbackBase = machinesDb[machineType] || machinesDb.maquina_generica;
+        return Number((fallbackBase.consumo_kwh / 10).toFixed(2));
+      }
 
       let estimated = powerKw;
 
       if (machineType === 'motor_industrial' && rpm >= 1700) estimated *= 1.08;
       if (machineType === 'compressor') estimated *= 1.20;
       if (machineType === 'painel_eletrico') estimated *= 0.55;
+      if (machineType === 'refrigeracao') estimated *= 0.92;
+      if (machineType === 'bomba') estimated *= 1.05;
+      if (machineType === 'ventilacao') estimated *= 0.88;
+      if (machineType === 'transformador') estimated *= 0.82;
       if (hasDualVoltage) estimated *= 1.03;
 
       return Number(estimated.toFixed(2));
@@ -786,12 +817,13 @@
 
       if (model.includes('W22') || model.includes('90S')) return Math.max(6, mappedAge - 1);
       if (model.includes('1LA7')) return mappedAge;
+      if (model.includes('KF-')) return Math.max(5, mappedAge);
 
       return mappedAge;
     }
 
     function carbonTranslation(machineType, parsedData, text = '') {
-      const base = machinesDb[machineType];
+      const base = machinesDb[machineType] || machinesDb.maquina_generica;
       const consumo = estimateConsumption(machineType, parsedData, text);
       const co2PerHour = consumo * base.co2_factor;
       const idade = estimateAge(parsedData, base);
@@ -830,13 +862,33 @@
         recommendations.push('Revisar regime de operação e balanceamento mecânico');
       }
 
+      if (machineType === 'refrigeracao') {
+        recommendations.push('Verificar fluido refrigerante, vedação e eficiência térmica do conjunto');
+      }
+
+      if (machineType === 'bomba') {
+        recommendations.push('Avaliar curva hidráulica e redimensionamento para evitar sobrecarga');
+      }
+
+      if (machineType === 'painel_eletrico') {
+        recommendations.push('Revisar aquecimento interno, proteção e qualidade das conexões elétricas');
+      }
+
+      if (machineType === 'transformador') {
+        recommendations.push('Monitorar aquecimento, perdas em vazio e qualidade do isolamento');
+      }
+
+      if (machineType === 'maquina_generica') {
+        recommendations.push('Validar manualmente os dados extraídos antes da decisão final');
+      }
+
       if (recommendations.length === 0) {
         recommendations.push('Manter plano de inspeção e monitoramento preventivo');
       }
 
       recommendations.push('Implementar monitoramento IoT em tempo real');
 
-      return recommendations;
+      return [...new Set(recommendations)];
     }
 
     function runEcoChainAnalysis(parsedData, text) {
