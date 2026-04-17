@@ -450,6 +450,27 @@
       opacity: 1;
     }
 
+    .custom-file-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border-strong);
+      background: linear-gradient(180deg, rgba(24, 44, 80, 0.98), rgba(16, 31, 59, 0.98));
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease;
+     }
+
+    .custom-file-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(131, 172, 236, 0.72);
+     }
+
     .next-btn.enabled:hover {
       transform: translateY(-1px);
     }
@@ -572,11 +593,16 @@
           <div class="pill">Etapa 1</div>
         </div>
 
-        <div class="controls">
-          <input type="file" id="fileInput" accept="image/*" />
-          <button id="processBtn" disabled>Processar imagem</button>
-          <button id="downloadBtn" disabled>Baixar imagem tratada</button>
-        </div>
+   <div class="controls">
+        <label for="cameraInput" class="custom-file-button">Tirar foto da placa</label>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden />
+
+        <label for="fileInput" class="custom-file-button">Escolher imagem</label>
+        <input type="file" id="fileInput" accept="image/*" hidden />
+
+        <button id="processBtn" disabled>Processar imagem</button>
+        <button id="downloadBtn" disabled>Baixar imagem tratada</button>
+    </div>
 
         <div class="preview" id="previewBox">
           <span id="previewPlaceholder">Nenhuma imagem enviada.</span>
@@ -639,6 +665,7 @@
 
   <script>
     const fileInput = document.getElementById('fileInput');
+    const cameraInput = document.getElementById('cameraInput');
     const processBtn = document.getElementById('processBtn');
     const downloadBtn = document.getElementById('downloadBtn');
     const previewBox = document.getElementById('previewBox');
@@ -663,44 +690,47 @@
     let currentImage = null;
     let lastProcessedCanvas = null;
 
-    fileInput.addEventListener('change', (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
+    fileInput.addEventListener('change', handleImageSelection);
+    cameraInput.addEventListener('change', handleImageSelection);
 
-      const reader = new FileReader();
+    function handleImageSelection(event) {
+    const file = event.target.files[0];
+    if (!file) return;
 
-      reader.onload = (e) => {
-        const img = new Image();
+    const reader = new FileReader();
 
-        img.onload = () => {
-          currentImage = img;
-          previewBox.innerHTML = '';
-          previewBox.appendChild(img);
-          processBtn.disabled = false;
-          downloadBtn.disabled = true;
-          statusBox.textContent = 'Imagem carregada. Clique em "Processar imagem".';
-          localStorage.setItem('ecochain_uploaded_image', e.target.result);
-          clearResults();
-          disableNextStep();
-        };
+    reader.onload = (e) => {
+    const img = new Image();
 
-        img.onerror = () => {
-          currentImage = null;
-          processBtn.disabled = true;
-          statusBox.textContent = 'Falha ao carregar a imagem selecionada.';
-        };
+      img.onload = () => {
+      currentImage = img;
+      previewBox.innerHTML = '';
+      previewBox.appendChild(img);
+      processBtn.disabled = false;
+      downloadBtn.disabled = true;
+      statusBox.textContent = 'Imagem carregada. Clique em "Processar imagem".';
+      localStorage.setItem('ecochain_uploaded_image', e.target.result);
+      clearResults();
+      disableNextStep();
+    };
 
-        img.src = e.target.result;
-      };
+    img.onerror = () => {
+      currentImage = null;
+      processBtn.disabled = true;
+      statusBox.textContent = 'Falha ao carregar a imagem selecionada.';
+    };
 
-      reader.onerror = () => {
-        currentImage = null;
-        processBtn.disabled = true;
-        statusBox.textContent = 'Falha ao ler o arquivo da imagem.';
-      };
+    img.src = e.target.result;
+  };
 
-      reader.readAsDataURL(file);
-    });
+    reader.onerror = () => {
+    currentImage = null;
+    processBtn.disabled = true;
+    statusBox.textContent = 'Falha ao ler o arquivo da imagem.';
+  };
+
+  reader.readAsDataURL(file);
+}
 
     processBtn.addEventListener('click', async () => {
       if (!currentImage) {
